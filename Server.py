@@ -48,7 +48,7 @@ def ReceiveMessages():
         
         print(ConnectMessage)
         
-        client.send("Podaj nazwę użytkownika:".encode("utf-8"))
+        client.send("FLAG_INIT".encode("utf-8"))
         UserName = client.recv(1024).decode("utf-8")
         UserNamesList.append(UserName)
         ClientsList.append(client)
