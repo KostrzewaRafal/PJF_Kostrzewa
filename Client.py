@@ -1,6 +1,16 @@
 import socket
 import threading
 
+from key_generator import KeyGenerator
+from cryptography.fernet import Fernet
+
+
+key_generator = KeyGenerator()
+UserSeed = "1234"  
+key = key_generator.generate_key(43, seed=UserSeed)
+f = Fernet(key)
+
+
 
 host_IP = socket.gethostbyname(socket.gethostname()) #Pobranie ip hosta 
 port = 12345

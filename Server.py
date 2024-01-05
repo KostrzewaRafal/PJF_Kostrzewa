@@ -6,13 +6,12 @@ from cryptography.fernet import Fernet
 
 
 key_generator = KeyGenerator()
-
-
-
 UserSeed = "1234"  
 key = key_generator.generate_key(43, seed=UserSeed)
-
 f = Fernet(key)
+
+
+
 Cypher = f.encrypt(b"not encrypted")
 print(Cypher)
 Decoded=f.decrypt(Cypher)
