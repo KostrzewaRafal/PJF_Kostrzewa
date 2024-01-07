@@ -5,10 +5,13 @@ from key_generator import KeyGenerator
 from cryptography.fernet import Fernet
 
 
-key_generator = KeyGenerator()
-UserSeed = "1234"  
-key = key_generator.generate_key(43, seed=UserSeed)
-f = Fernet(key)
+
+
+from Fernet import FernetGenerator
+
+f = FernetGenerator.generate_key()
+
+
 
 
 
@@ -31,13 +34,19 @@ def RecevieFromServer():
             break
 
         try:
-            message = client.recv(1024).decode('utf-8')
+            messageEncrypted = client.recv(1024).decode('utf-8')
+            message = f.decrypt(messageEncrypted)
             if message == "FLAG_INIT":
-                client.send(UserNameInput.encode('utf-8'))
-                Admin_Password_FLAG_Recv = client.recv(1024).decode('utf-8')
+                EncryptedUserNameInput = f.encrypt(bytes(UserNameInput,'UTF-8'))
+                client.send(f"{EncryptedUserNameInput}".encode('utf-8'))
+                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024).decode('utf-8')
+                Admin_Password_FLAG_Recv = f.decrypt(Admin_Password_FLAG_Recv_Encrypted)
                 if Admin_Password_FLAG_Recv == "FLAG_ADMIN_PASSWORD":
-                    client.send(Admin_Password.encode("utf-8"))
-                    if client.recv(1024).decode("utf-8") == "FLAG_Wrong_Password":
+                    Encrypted_Admin_Password = f.encrypt(bytes(Admin_Password,'UTF-8'))
+                    client.send(f"{Encrypted_Admin_Password}".encode("utf-8"))
+                    WrongPasswordEncrypted = client.recv(1024).decode("utf-8")
+                    FlagWrongPassword = f.decrypt(WrongPasswordEncrypted)
+                    if FlagWrongPassword == "FLAG_Wrong_Password":
                         print("Wprowadzono złe hasło dla admina!")
                         stop_thread = True
                 elif Admin_Password_FLAG_Recv == "FLAG_BAN":
@@ -63,14 +72,19 @@ def ClientToServer():
             if message[len(UserNameInput)+2].startswith('/'):
                 if UserNameInput == "admin":
                     if message[(len(UserNameInput)+2):].startswith('/kick'):
-                        client.send(f"KICK {message[(len(UserNameInput)+2+6):]}".encode("utf-8"))
+                        messageKICK = f"KICK {message[(len(UserNameInput)+2+6):]}"
+                        EncryptedmessageKICK = f.encrypt(bytes(messageKICK,'UTF-8'))
+                        client.send(f"{EncryptedmessageKICK}".encode("utf-8"))
                         
                     elif message[(len(UserNameInput)+2):].startswith('/ban'):
-                        client.send(f"BAN {message[(len(UserNameInput)+2+5):]}".encode("utf-8"))
+                        messageBAN = f"BAN {message[(len(UserNameInput)+2+5):]}"
+                        EncryptedmessageBAN = f.encrypt(bytes(messageBAN,'UTF-8'))
+                        client.send(f"{EncryptedmessageBAN}".encode("utf-8"))
                 else:
                     print("Nie masz uprawnień admina!")
             else:
-                client.send(message.encode('utf-8'))
+                Encryptedmessage = f.encrypt(bytes(message,'UTF-8'))
+                client.send(f"{Encryptedmessage}".encode('utf-8'))
 
 Client_Recv_Thread = threading.Thread(target=RecevieFromServer)
 Client_Recv_Thread.start()
