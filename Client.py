@@ -1,16 +1,15 @@
 import socket
 import threading
 
-from key_generator import KeyGenerator
-from cryptography.fernet import Fernet
+from VigenerCipher import PseudoRandomBytesGenerator
+from Cryptodome.Cipher import AES
 
+seed = 42 
+prbg = PseudoRandomBytesGenerator(seed)
 
-
-
-from Fernet import FernetGenerator
-
-f = FernetGenerator.generate_key()
-
+key = prbg.generate_bytes(16)
+cipher = AES.new(key, AES.MODE_EAX)
+d_cipher = AES.new(key, AES.MODE_EAX, cipher.nonce)
 
 
 
@@ -34,18 +33,18 @@ def RecevieFromServer():
             break
 
         try:
-            messageEncrypted = client.recv(1024).decode('utf-8')
-            message = f.decrypt(messageEncrypted)
+            messageEncrypted = client.recv(1024)
+            message = d_cipher.decrypt(messageEncrypted).decode("utf-8")
             if message == "FLAG_INIT":
-                EncryptedUserNameInput = f.encrypt(bytes(UserNameInput,'UTF-8'))
-                client.send(f"{EncryptedUserNameInput}".encode('utf-8'))
-                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024).decode('utf-8')
-                Admin_Password_FLAG_Recv = f.decrypt(Admin_Password_FLAG_Recv_Encrypted)
+                EncryptedUserNameInput = cipher.encrypt(bytes(UserNameInput,'UTF-8'))
+                client.send(f"{EncryptedUserNameInput}".encode())
+                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024)
+                Admin_Password_FLAG_Recv = d_cipher.decrypt(Admin_Password_FLAG_Recv_Encrypted).decode("utf-8")
                 if Admin_Password_FLAG_Recv == "FLAG_ADMIN_PASSWORD":
-                    Encrypted_Admin_Password = f.encrypt(bytes(Admin_Password,'UTF-8'))
-                    client.send(f"{Encrypted_Admin_Password}".encode("utf-8"))
-                    WrongPasswordEncrypted = client.recv(1024).decode("utf-8")
-                    FlagWrongPassword = f.decrypt(WrongPasswordEncrypted)
+                    Encrypted_Admin_Password = cipher.encrypt(bytes(Admin_Password,'UTF-8'))
+                    client.send(f"{Encrypted_Admin_Password}".encode())
+                    WrongPasswordEncrypted = client.recv(1024)
+                    FlagWrongPassword = d_cipher.decrypt(WrongPasswordEncrypted).decode("utf-8")
                     if FlagWrongPassword == "FLAG_Wrong_Password":
                         print("Wprowadzono złe hasło dla admina!")
                         stop_thread = True
@@ -73,18 +72,18 @@ def ClientToServer():
                 if UserNameInput == "admin":
                     if message[(len(UserNameInput)+2):].startswith('/kick'):
                         messageKICK = f"KICK {message[(len(UserNameInput)+2+6):]}"
-                        EncryptedmessageKICK = f.encrypt(bytes(messageKICK,'UTF-8'))
-                        client.send(f"{EncryptedmessageKICK}".encode("utf-8"))
+                        EncryptedmessageKICK = cipher.encrypt(bytes(messageKICK,'UTF-8'))
+                        client.send(f"{EncryptedmessageKICK}".encode())
                         
                     elif message[(len(UserNameInput)+2):].startswith('/ban'):
                         messageBAN = f"BAN {message[(len(UserNameInput)+2+5):]}"
-                        EncryptedmessageBAN = f.encrypt(bytes(messageBAN,'UTF-8'))
-                        client.send(f"{EncryptedmessageBAN}".encode("utf-8"))
+                        EncryptedmessageBAN = cipher.encrypt(bytes(messageBAN,'UTF-8'))
+                        client.send(f"{EncryptedmessageBAN}".encode())
                 else:
                     print("Nie masz uprawnień admina!")
             else:
-                Encryptedmessage = f.encrypt(bytes(message,'UTF-8'))
-                client.send(f"{Encryptedmessage}".encode('utf-8'))
+                Encryptedmessage = cipher.encrypt(bytes(message,'UTF-8'))
+                client.send(f"{Encryptedmessage}".encode())
 
 Client_Recv_Thread = threading.Thread(target=RecevieFromServer)
 Client_Recv_Thread.start()

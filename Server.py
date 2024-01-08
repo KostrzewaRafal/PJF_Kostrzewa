@@ -1,12 +1,19 @@
 import socket
 import threading
 
+from VigenerCipher import PseudoRandomBytesGenerator
+from Cryptodome.Cipher import AES
+
+seed = 42 
+prbg = PseudoRandomBytesGenerator(seed)
+
+key = prbg.generate_bytes(16)
+
+cipher = AES.new(key, AES.MODE_EAX)
+d_cipher = AES.new(key, AES.MODE_EAX, cipher.nonce)
 
 
 
-from Fernet import FernetGenerator
-
-f = FernetGenerator.generate_key()
 
 
 
@@ -27,16 +34,15 @@ UserNamesList= []
 
 # Wysylanie wiadomosci do wszystkich klientow (broadcast)
 def ServerToClients(message):
-    message = f.encrypt(bytes(message,'UTF-8'))
     for client in ClientsList:
-        client.send(message)
+        client.send(f"{message}".encode())
 
 def ClientHandle(client):
     while True:
         try:
-            f = FernetGenerator.generate_key()
+           
             message0 = client.recv(1024)
-            message1 = message2 = f.decrypt(message0)
+            message1 = message2 = d_cipher.decrypt(message0)
             
             if message1.decode("utf-8").startswith("KICK"):
                 if UserNamesList[ClientsList.index(client)] == 'admin':
@@ -45,8 +51,8 @@ def ClientHandle(client):
                     Kick_User(ToBeKicked)
                 else:
                     msg = f"Nie masz uprawnień!"
-                    Cypher = f.encrypt(bytes(msg,'UTF-8'))
-                    client.send(f"{Cypher}".encode("utf-8"))
+                    Cypher = cipher.encrypt(bytes(msg,'UTF-8'))
+                    client.send(f"{Cypher}".encode())
 
             if message1.decode("utf-8").startswith("BAN"):
                 if UserNamesList[ClientsList.index(client)] == 'admin':
@@ -57,10 +63,11 @@ def ClientHandle(client):
                     print(f"{ToBeBanned} został zbanowany!")
                 else:
                     msg = f"Nie masz uprawnień!"
-                    Cypher = f.encrypt(bytes(msg,'UTF-8'))
-                    client.send(f"{Cypher}".encode("utf-8"))
+                    Cypher = cipher.encrypt(bytes(msg,'UTF-8'))
+                    client.send(f"{Cypher}".encode())
             else:
-                CypherToAll = f.encrypt(bytes(message2,'UTF-8'))
+                message2 = message2.decode("utf-8")
+                CypherToAll = cipher.encrypt(bytes(message2,'UTF-8'))
                 ServerToClients(CypherToAll)
         except:
             if client in ClientsList:
@@ -70,8 +77,8 @@ def ClientHandle(client):
                 
                 UserName = UserNamesList[index]
                 ExitMessage = f"{UserName} opuścił chat"
-                CypherExitMessage = f.encrypt(bytes(ExitMessage,'UTF-8'))
-                ServerToClients(f"{CypherExitMessage}".encode('utf-8'))
+                CypherExitMessage = cipher.encrypt(bytes(ExitMessage,'UTF-8'))
+                ServerToClients(CypherExitMessage)
 
                 UserNamesList.remove(UserName)
                 break
@@ -80,44 +87,39 @@ def ReceiveMessages():
     while True:
         client, IP_Adress = server.accept()
         ConnectMessage = f"Połączono z {str(IP_Adress)}"
-
-        f = FernetGenerator.generate_key()
-       
-        
         print(ConnectMessage)
         
         FlagINIT = "FLAG_INIT"
-        CypherFlagInit = f.encrypt(bytes(FlagINIT,'UTF-8'))
-        client.send(f"{CypherFlagInit}".encode("utf-8"))
-        UserNameEncrypted = client.recv(1024).decode("utf-8")
-        UserName = f.decrypt(UserNameEncrypted)
-
+        CypherFlagInit = cipher.encrypt(bytes(FlagINIT,'UTF-8'))
+        client.send(f"{CypherFlagInit}".encode())
+        UserNameEncrypted = client.recv(1024)
+        UserName = d_cipher.decrypt(UserNameEncrypted).decode("utf-8")
+        print(f"------test =[{UserName}]") ##############################3
         
         with open("BAN_LIST.txt", "r") as f:
             bans = f.readlines()
 
         if UserName + "\n" in bans:
-            f = FernetGenerator.generate_key()
+            
             FlagBAN = "FLAG_BAN"
-            CypherFlagBAN = f.encrypt(bytes(FlagBAN,'UTF-8'))
-            client.send(f"{CypherFlagBAN}".encode("utf-8"))
+            CypherFlagBAN = cipher.encrypt(bytes(FlagBAN,'UTF-8'))
+            client.send(f"{CypherFlagBAN}".encode())
 
             client.close()
             continue
 
         if UserName == "admin":
-            f = FernetGenerator.generate_key()
             FlagAdminPass = "FLAG_ADMIN_PASSWORD"
-            CypherFlagAdmPass= f.encrypt(bytes(FlagAdminPass,'UTF-8'))
-            client.send(f"{CypherFlagAdmPass}".encode("utf-8"))
+            CypherFlagAdmPass = cipher.encrypt(bytes(FlagAdminPass,'UTF-8'))
+            client.send(f"{CypherFlagAdmPass}".encode())
             print("Próba zalogowania na admina")
-            AdminPasswordEncrypt = client.recv(1024).decode("utf-8")
-            AdminPassword = f.decrypt(AdminPasswordEncrypt)
+            AdminPasswordEncrypt = client.recv(1024)
+            AdminPassword = d_cipher.decrypt(AdminPasswordEncrypt).decode("utf-8")
             #tutaj zamienic haslo na hash hasła
             if AdminPassword != "123":
                 FlagWrng = "FLAG_Wrong_Password"
-                CypherFlagWrng = f.encrypt(bytes(FlagWrng,'UTF-8'))
-                client.send(f"{CypherFlagWrng}".encode("utf-8"))
+                CypherFlagWrng = cipher.encrypt(bytes(FlagWrng,'UTF-8'))
+                client.send(f"{CypherFlagWrng}".encode())
                 client.close()
                 continue
             
@@ -128,12 +130,12 @@ def ReceiveMessages():
 
         print(f"Nowy użytkownik: {UserName}")
         WelcomeMsg = f"{UserName} dołączył do chat'u"
-        CypherWelcomeMsg = f.encrypt(bytes(WelcomeMsg,'UTF-8'))
-        ServerToClients(f"{CypherWelcomeMsg}".encode("utf-8"))
+        CypherWelcomeMsg = cipher.encrypt(bytes(WelcomeMsg,'UTF-8'))
+        ServerToClients(f"{CypherWelcomeMsg}".encode())
 
         Wlcome = "Podłaczono do chat'u"
-        CypherWlcome = f.encrypt(bytes(Wlcome,'UTF-8'))
-        client.send(f"{CypherWlcome}".encode("utf-8"))
+        CypherWlcome = cipher.encrypt(bytes(Wlcome,'UTF-8'))
+        client.send(f"{CypherWlcome}".encode())
 
         thread = threading.Thread(target=ClientHandle, args = (client,))
         thread.start()
@@ -146,15 +148,15 @@ def Kick_User(name):
         ClientsList.remove(kicked_client)
 
         Kickmsg = f"ZOSTAŁEŚ WYRZUCONY PRZEZ ADMINA!"
-        CypherKickmsg = f.encrypt(bytes(Kickmsg,'UTF-8'))
-        kicked_client.send(f"{CypherKickmsg}".encode("utf-8"))
+        CypherKickmsg = cipher.encrypt(bytes(Kickmsg,'UTF-8'))
+        kicked_client.send(f"{CypherKickmsg}".encode())
         
         kicked_client.close()
         UserNamesList.remove(name)
 
         KickmsgALL = f"{name} został wyrzucony przez Admina!"
-        CypherKickmsgALL = f.encrypt(bytes(KickmsgALL,'UTF-8'))
-        ServerToClients(f"{CypherKickmsgALL}".encode("utf-8"))
+        CypherKickmsgALL = cipher.encrypt(bytes(KickmsgALL,'UTF-8'))
+        ServerToClients(CypherKickmsgALL)
         
 
 print("Serwer został uruchomiony...")
