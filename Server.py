@@ -1,17 +1,10 @@
 import socket
 import threading
 
-from VigenerCipher import PseudoRandomBytesGenerator
-from Cryptodome.Cipher import AES
+from VigenerCipher import VigenersCipher
 
-seed = 42 
-prbg = PseudoRandomBytesGenerator(seed)
-
-key = prbg.generate_bytes(16)
-
-cipher = AES.new(key, AES.MODE_EAX)
-d_cipher = AES.new(key, AES.MODE_EAX, cipher.nonce)
-
+klucz = "ONLYMESSAGE"
+szyfr_vigenera = VigenersCipher(klucz)
 
 
 
@@ -34,41 +27,41 @@ UserNamesList= []
 
 # Wysylanie wiadomosci do wszystkich klientow (broadcast)
 def ServerToClients(message):
+    CipherText = szyfr_vigenera.szyfruj(message)
     for client in ClientsList:
-        client.send(f"{message}".encode())
+        client.send(CipherText.encode("utf-8"))
 
 def ClientHandle(client):
     while True:
         try:
            
             message0 = client.recv(1024)
-            message1 = message2 = d_cipher.decrypt(message0)
+            message0 = message0.decode("utf-8")
+            message1 = message2 = szyfr_vigenera.deszyfruj(message0)
             
-            if message1.decode("utf-8").startswith("KICK"):
+            if message1.startswith("KICK"):
                 if UserNamesList[ClientsList.index(client)] == 'admin':
-                    ToBeKicked = message1.decode("utf-8")[5:]
+                    ToBeKicked = message1[5:]
                     
                     Kick_User(ToBeKicked)
                 else:
                     msg = f"Nie masz uprawnień!"
-                    Cypher = cipher.encrypt(bytes(msg,'UTF-8'))
-                    client.send(f"{Cypher}".encode())
+                    Cypher = szyfr_vigenera.szyfruj(msg)
+                    client.send(Cypher.encode("utf-8"))
 
-            if message1.decode("utf-8").startswith("BAN"):
+            if message1.startswith("BAN"):
                 if UserNamesList[ClientsList.index(client)] == 'admin':
-                    ToBeBanned = message1.decode("utf-8")[4:]
+                    ToBeBanned = message1[4:]
                     Kick_User(ToBeBanned)
                     with open("BAN_LIST.txt", "a") as f:
                         f.write(f"{ToBeBanned}\n")
                     print(f"{ToBeBanned} został zbanowany!")
                 else:
                     msg = f"Nie masz uprawnień!"
-                    Cypher = cipher.encrypt(bytes(msg,'UTF-8'))
-                    client.send(f"{Cypher}".encode())
+                    Cypher = szyfr_vigenera.szyfruj(msg)
+                    client.send(Cypher.encode("utf-8"))
             else:
-                message2 = message2.decode("utf-8")
-                CypherToAll = cipher.encrypt(bytes(message2,'UTF-8'))
-                ServerToClients(CypherToAll)
+                ServerToClients(message2)
         except:
             if client in ClientsList:
                 index = ClientsList.index(client)
@@ -77,8 +70,7 @@ def ClientHandle(client):
                 
                 UserName = UserNamesList[index]
                 ExitMessage = f"{UserName} opuścił chat"
-                CypherExitMessage = cipher.encrypt(bytes(ExitMessage,'UTF-8'))
-                ServerToClients(CypherExitMessage)
+                ServerToClients(ExitMessage)
 
                 UserNamesList.remove(UserName)
                 break
@@ -90,11 +82,12 @@ def ReceiveMessages():
         print(ConnectMessage)
         
         FlagINIT = "FLAG_INIT"
-        CypherFlagInit = cipher.encrypt(bytes(FlagINIT,'UTF-8'))
-        client.send(f"{CypherFlagInit}".encode())
-        UserNameEncrypted = client.recv(1024)
-        UserName = d_cipher.decrypt(UserNameEncrypted).decode("utf-8")
-        print(f"------test =[{UserName}]") ##############################3
+        CypherFlagInit = szyfr_vigenera.szyfruj(FlagINIT)
+        client.send(CypherFlagInit.encode("utf-8"))
+        
+        UserNameEncrypted = client.recv(1024).decode("utf-8")
+        UserName = szyfr_vigenera.deszyfruj(UserNameEncrypted)
+        print(f"------test =[{UserName}]") ##############################
         
         with open("BAN_LIST.txt", "r") as f:
             bans = f.readlines()
@@ -102,24 +95,25 @@ def ReceiveMessages():
         if UserName + "\n" in bans:
             
             FlagBAN = "FLAG_BAN"
-            CypherFlagBAN = cipher.encrypt(bytes(FlagBAN,'UTF-8'))
-            client.send(f"{CypherFlagBAN}".encode())
+            CypherFlagBAN = szyfr_vigenera.szyfruj(FlagBAN)
+            client.send(f"{CypherFlagBAN}".encode("utf-8"))
 
             client.close()
             continue
 
         if UserName == "admin":
             FlagAdminPass = "FLAG_ADMIN_PASSWORD"
-            CypherFlagAdmPass = cipher.encrypt(bytes(FlagAdminPass,'UTF-8'))
-            client.send(f"{CypherFlagAdmPass}".encode())
+            CypherFlagAdmPass = szyfr_vigenera.szyfruj(FlagAdminPass)
+            client.send(f"{CypherFlagAdmPass}".encode("utf-8"))
             print("Próba zalogowania na admina")
-            AdminPasswordEncrypt = client.recv(1024)
-            AdminPassword = d_cipher.decrypt(AdminPasswordEncrypt).decode("utf-8")
+
+            AdminPasswordEncrypt = client.recv(1024).decode("utf-8")
+            AdminPassword = szyfr_vigenera.deszyfruj(AdminPasswordEncrypt)
             #tutaj zamienic haslo na hash hasła
             if AdminPassword != "123":
                 FlagWrng = "FLAG_Wrong_Password"
-                CypherFlagWrng = cipher.encrypt(bytes(FlagWrng,'UTF-8'))
-                client.send(f"{CypherFlagWrng}".encode())
+                CypherFlagWrng = szyfr_vigenera.szyfruj(FlagWrng)
+                client.send(f"{CypherFlagWrng}".encode("utf-8"))
                 client.close()
                 continue
             
@@ -130,12 +124,11 @@ def ReceiveMessages():
 
         print(f"Nowy użytkownik: {UserName}")
         WelcomeMsg = f"{UserName} dołączył do chat'u"
-        CypherWelcomeMsg = cipher.encrypt(bytes(WelcomeMsg,'UTF-8'))
-        ServerToClients(f"{CypherWelcomeMsg}".encode())
+        ServerToClients(WelcomeMsg)
 
         Wlcome = "Podłaczono do chat'u"
-        CypherWlcome = cipher.encrypt(bytes(Wlcome,'UTF-8'))
-        client.send(f"{CypherWlcome}".encode())
+        CypherWlcome = szyfr_vigenera.szyfruj(Wlcome)
+        client.send(CypherWlcome.encode("utf-8"))
 
         thread = threading.Thread(target=ClientHandle, args = (client,))
         thread.start()
@@ -148,15 +141,14 @@ def Kick_User(name):
         ClientsList.remove(kicked_client)
 
         Kickmsg = f"ZOSTAŁEŚ WYRZUCONY PRZEZ ADMINA!"
-        CypherKickmsg = cipher.encrypt(bytes(Kickmsg,'UTF-8'))
-        kicked_client.send(f"{CypherKickmsg}".encode())
+        CypherKickmsg = szyfr_vigenera.szyfruj(Kickmsg)
+        kicked_client.send(CypherKickmsg.encode("utf-8"))
         
         kicked_client.close()
         UserNamesList.remove(name)
 
         KickmsgALL = f"{name} został wyrzucony przez Admina!"
-        CypherKickmsgALL = cipher.encrypt(bytes(KickmsgALL,'UTF-8'))
-        ServerToClients(CypherKickmsgALL)
+        ServerToClients(KickmsgALL)
         
 
 print("Serwer został uruchomiony...")

@@ -1,15 +1,10 @@
 import socket
 import threading
 
-from VigenerCipher import PseudoRandomBytesGenerator
-from Cryptodome.Cipher import AES
+from VigenerCipher import VigenersCipher
 
-seed = 42 
-prbg = PseudoRandomBytesGenerator(seed)
-
-key = prbg.generate_bytes(16)
-cipher = AES.new(key, AES.MODE_EAX)
-d_cipher = AES.new(key, AES.MODE_EAX, cipher.nonce)
+klucz = "ONLYMESSAGE"
+szyfr_vigenera = VigenersCipher(klucz)
 
 
 
@@ -33,18 +28,18 @@ def RecevieFromServer():
             break
 
         try:
-            messageEncrypted = client.recv(1024)
-            message = d_cipher.decrypt(messageEncrypted).decode("utf-8")
+            messageEncrypted = client.recv(1024).decode("utf-8")
+            message = szyfr_vigenera.deszyfruj(messageEncrypted)
             if message == "FLAG_INIT":
-                EncryptedUserNameInput = cipher.encrypt(bytes(UserNameInput,'UTF-8'))
-                client.send(f"{EncryptedUserNameInput}".encode())
-                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024)
-                Admin_Password_FLAG_Recv = d_cipher.decrypt(Admin_Password_FLAG_Recv_Encrypted).decode("utf-8")
+                EncryptedUserNameInput = szyfr_vigenera.szyfruj(UserNameInput)
+                client.send(f"{EncryptedUserNameInput}".encode("utf-8"))
+                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024).decode("utf-8")
+                Admin_Password_FLAG_Recv = szyfr_vigenera.deszyfruj(Admin_Password_FLAG_Recv_Encrypted)
                 if Admin_Password_FLAG_Recv == "FLAG_ADMIN_PASSWORD":
-                    Encrypted_Admin_Password = cipher.encrypt(bytes(Admin_Password,'UTF-8'))
-                    client.send(f"{Encrypted_Admin_Password}".encode())
-                    WrongPasswordEncrypted = client.recv(1024)
-                    FlagWrongPassword = d_cipher.decrypt(WrongPasswordEncrypted).decode("utf-8")
+                    Encrypted_Admin_Password = szyfr_vigenera.szyfruj(Admin_Password)
+                    client.send(f"{Encrypted_Admin_Password}".encode("utf-8"))
+                    WrongPasswordEncrypted = client.recv(1024).decode("utf-8")
+                    FlagWrongPassword = szyfr_vigenera.deszyfruj(WrongPasswordEncrypted)
                     if FlagWrongPassword == "FLAG_Wrong_Password":
                         print("Wprowadzono złe hasło dla admina!")
                         stop_thread = True
@@ -54,6 +49,7 @@ def RecevieFromServer():
                     stop_thread = True
 
             else:
+
                 print(message)
         except:
             print("BŁĄD")
@@ -72,18 +68,18 @@ def ClientToServer():
                 if UserNameInput == "admin":
                     if message[(len(UserNameInput)+2):].startswith('/kick'):
                         messageKICK = f"KICK {message[(len(UserNameInput)+2+6):]}"
-                        EncryptedmessageKICK = cipher.encrypt(bytes(messageKICK,'UTF-8'))
-                        client.send(f"{EncryptedmessageKICK}".encode())
+                        EncryptedmessageKICK = szyfr_vigenera.szyfruj(messageKICK)
+                        client.send(EncryptedmessageKICK.encode("utf-8"))
                         
                     elif message[(len(UserNameInput)+2):].startswith('/ban'):
                         messageBAN = f"BAN {message[(len(UserNameInput)+2+5):]}"
-                        EncryptedmessageBAN = cipher.encrypt(bytes(messageBAN,'UTF-8'))
-                        client.send(f"{EncryptedmessageBAN}".encode())
+                        EncryptedmessageBAN = szyfr_vigenera.szyfruj(messageBAN)
+                        client.send(EncryptedmessageBAN.encode("utf-8"))
                 else:
                     print("Nie masz uprawnień admina!")
             else:
-                Encryptedmessage = cipher.encrypt(bytes(message,'UTF-8'))
-                client.send(f"{Encryptedmessage}".encode())
+                Encryptedmessage = szyfr_vigenera.szyfruj(message)
+                client.send(f"{Encryptedmessage}".encode("utf-8"))
 
 Client_Recv_Thread = threading.Thread(target=RecevieFromServer)
 Client_Recv_Thread.start()
