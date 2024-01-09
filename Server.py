@@ -107,7 +107,7 @@ def ReceiveMessages():
             AdminPasswordEncrypt = client.recv(1024).decode("utf-8")
             AdminPassword = szyfr_vigenera.deszyfruj(AdminPasswordEncrypt)
             # tutaj zamienic haslo na hash hasła
-            if AdminPassword != "123":
+            if str(AdminPassword) != "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3":
                 FlagWrng = "FLAG_Wrong_Password"
                 CypherFlagWrng = szyfr_vigenera.szyfruj(FlagWrng)
                 client.send(f"{CypherFlagWrng}".encode("utf-8"))

@@ -1,5 +1,6 @@
 import socket
 import threading
+import hashlib
 
 from VigenerCipher import VigenersCipher
 
@@ -15,7 +16,11 @@ client.connect((host_IP, port))
 
 UserNameInput = input("Podaj nazwę użytkownika:")
 if UserNameInput == "admin":
-    Admin_Password = input("Podaj hasło dla admina:")
+    Admin_Password = input("Podaj hasło dla admina:")#123
+    HASH1= hashlib.sha256()
+    HASH1.update(Admin_Password.encode())
+    Admin_Password = HASH1.hexdigest()
+    print(Admin_Password)
 
 stop_thread = False
 
