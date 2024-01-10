@@ -1,10 +1,10 @@
- - ZMIANA NAZWY NA EscAPEchat, APEstheticChat, ApeChat, pAPEr plane, shAPE
+#- ZMIANA NAZWY NA EscAPEchat, APEstheticChat, ApeChat, pAPEr plane, shAPE --- What'sAPE
 - przycisk pokazujący osoby online (przycisk z grafika ludzika)
 - GUI (Monkey vibe - brown oraz zdj maupek)
-- logowanie (zapisanie gdzieś nazwy oraz hash'u z hasła)
+1- logowanie (zapisanie gdzieś nazwy oraz hash'u z hasła)
   - Hash'owanie haseł
-- prywatne wiadomości
+2- prywatne wiadomości
   - Header'y do wiadomości np 10232|message... 
-- historia wiadomości
+3- historia wiadomości
   - Wczytywanie historii po zalogowaniu
-? tworzenie czatów grupowych
+
