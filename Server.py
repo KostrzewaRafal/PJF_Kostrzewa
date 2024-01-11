@@ -1,150 +1,147 @@
 import socket
 import threading
-
 from VigenerCipher import VigenersCipher
 
-klucz = "ONLYMESSAGE"
-szyfr_vigenera = VigenersCipher(klucz)
+class Server:
+    def __init__(self, host, port, max_clients=20):
+        self.host = host
+        self.port = port
+        self.max_clients = max_clients
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.bind((self.host, self.port))
+        self.server_socket.listen(self.max_clients)
 
+        self.clients_list = []
+        self.user_names_list = []
+        self.vigeners_cipher = VigenersCipher("WHATSAPE")
 
-host_IP = socket.gethostbyname(socket.gethostname())  # Pobranie ip hosta
-port = 12345
-MaxClients = 20
+    def send_to_clients(self, message):
+        cipher_text = self.vigeners_cipher.szyfruj(message)
+        for client in self.clients_list:
+            client.send(cipher_text.encode("utf-8"))
 
-# AF_INET - IPv4, SOCK_STREAM - tcp / SOCK_DGRAM - udp
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def client_handle(self, client):
+        while True:
+            try:
+                message0 = client.recv(1024)
+                message0 = message0.decode("utf-8")
+                message1 = message2 = self.vigeners_cipher.deszyfruj(message0)
 
-server.bind((host_IP, port))  # Przypisanie serwerowi IP oraz portu
+                if message1.startswith("KICK"):
+                    if self.user_names_list[self.clients_list.index(client)] == "admin":
+                        to_be_kicked = message1[5:]
+                        self.kick_user(to_be_kicked)
+                    else:
+                        msg = "Nie masz uprawnień!"
+                        cipher_msg = self.vigeners_cipher.szyfruj(msg)
+                        client.send(cipher_msg.encode("utf-8"))
 
-server.listen(MaxClients)
+                if message1.startswith("BAN"):
+                    if self.user_names_list[self.clients_list.index(client)] == "admin":
+                        ToBeBanned = message1[4:]
+                        to_be_kicked(ToBeBanned)
+                        with open("BAN_LIST.txt", "a") as f:
+                            f.write(f"{ToBeBanned}\n")
+                        print(f"{ToBeBanned} został zbanowany!")
+                    else:
+                        msg = "Nie masz uprawnień!"
+                        Cypher = self.vigeners_cipher.szyfruj(msg)
+                        client.send(Cypher.encode("utf-8"))
 
-ClientsList = []
-UserNamesList = []
-
-
-# Wysylanie wiadomosci do wszystkich klientow (broadcast)
-def ServerToClients(message):
-    CipherText = szyfr_vigenera.szyfruj(message)
-    for client in ClientsList:
-        client.send(CipherText.encode("utf-8"))
-
-
-def ClientHandle(client):
-    while True:
-        try:
-            message0 = client.recv(1024)
-            message0 = message0.decode("utf-8")
-            message1 = message2 = szyfr_vigenera.deszyfruj(message0)
-
-            if message1.startswith("KICK"):
-                if UserNamesList[ClientsList.index(client)] == "admin":
-                    ToBeKicked = message1[5:]
-
-                    Kick_User(ToBeKicked)
                 else:
-                    msg = "Nie masz uprawnień!"
-                    Cypher = szyfr_vigenera.szyfruj(msg)
-                    client.send(Cypher.encode("utf-8"))
+                    self.send_to_clients(message2)
 
-            if message1.startswith("BAN"):
-                if UserNamesList[ClientsList.index(client)] == "admin":
-                    ToBeBanned = message1[4:]
-                    Kick_User(ToBeBanned)
-                    with open("BAN_LIST.txt", "a") as f:
-                        f.write(f"{ToBeBanned}\n")
-                    print(f"{ToBeBanned} został zbanowany!")
-                else:
-                    msg = "Nie masz uprawnień!"
-                    Cypher = szyfr_vigenera.szyfruj(msg)
-                    client.send(Cypher.encode("utf-8"))
-            else:
-                ServerToClients(message2)
-        except:
-            if client in ClientsList:
-                index = ClientsList.index(client)
-                ClientsList.remove(client)
-                client.close()
+            except :
+                if client in self.clients_list:
+                    index = self.clients_list.index(client)
+                    self.clients_list.remove(client)
+                    client.close()
 
-                UserName = UserNamesList[index]
-                ExitMessage = f"{UserName} opuścił chat"
-                ServerToClients(ExitMessage)
+                    user_name = self.user_names_list[index]
+                    exit_message = f"{user_name} opuścił chat"
+                    self.send_to_clients(exit_message)
 
-                UserNamesList.remove(UserName)
-                break
+                    self.user_names_list.remove(user_name)
+                    break
+
+    def receive_messages(self):
+        while True:
+            client, ip_address = self.server_socket.accept()
+            connect_message = f"Połączono z {str(ip_address)}"
+            print(connect_message)
+
+            flag_init = "FLAG_INIT"
+            cipher_flag_init = self.vigeners_cipher.szyfruj(flag_init)
+            client.send(cipher_flag_init.encode("utf-8"))
+
+            user_name_encrypted = client.recv(1024).decode("utf-8")
+            user_name = self.vigeners_cipher.deszyfruj(user_name_encrypted)
+
+            
+            
+            with open("BAN_LIST.txt", "r") as f:
+                bans = f.readlines()
 
 
-def ReceiveMessages():
-    while True:
-        client, IP_Adress = server.accept()
-        ConnectMessage = f"Połączono z {str(IP_Adress)}"
-        print(ConnectMessage)
 
-        FlagINIT = "FLAG_INIT"
-        CypherFlagInit = szyfr_vigenera.szyfruj(FlagINIT)
-        client.send(CypherFlagInit.encode("utf-8"))
+            
+            if user_name + "\n" in bans:
+                FlagBAN = "FLAG_BAN"
+                CypherFlagBAN = self.vigeners_cipher.szyfruj(FlagBAN)
+                client.send(f"{CypherFlagBAN}".encode("utf-8"))
 
-        UserNameEncrypted = client.recv(1024).decode("utf-8")
-        UserName = szyfr_vigenera.deszyfruj(UserNameEncrypted)
-        print(f"------test =[{UserName}]")  ##############################
-
-        with open("BAN_LIST.txt", "r") as f:
-            bans = f.readlines()
-
-        if UserName + "\n" in bans:
-            FlagBAN = "FLAG_BAN"
-            CypherFlagBAN = szyfr_vigenera.szyfruj(FlagBAN)
-            client.send(f"{CypherFlagBAN}".encode("utf-8"))
-
-            client.close()
-            continue
-
-        if UserName == "admin":
-            FlagAdminPass = "FLAG_ADMIN_PASSWORD"
-            CypherFlagAdmPass = szyfr_vigenera.szyfruj(FlagAdminPass)
-            client.send(f"{CypherFlagAdmPass}".encode("utf-8"))
-            print("Próba zalogowania na admina")
-
-            AdminPasswordEncrypt = client.recv(1024).decode("utf-8")
-            AdminPassword = szyfr_vigenera.deszyfruj(AdminPasswordEncrypt)
-            # tutaj zamienic haslo na hash hasła
-            if str(AdminPassword) != "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3":
-                FlagWrng = "FLAG_Wrong_Password"
-                CypherFlagWrng = szyfr_vigenera.szyfruj(FlagWrng)
-                client.send(f"{CypherFlagWrng}".encode("utf-8"))
                 client.close()
                 continue
 
-        UserNamesList.append(UserName)
-        ClientsList.append(client)
 
-        print(f"Nowy użytkownik: {UserName}")
-        WelcomeMsg = f"{UserName} dołączył do chat'u"
-        ServerToClients(WelcomeMsg)
+            if user_name == "admin":
+                FlagAdminPass = "FLAG_ADMIN_PASSWORD"
+                CypherFlagAdmPass = self.vigeners_cipher.szyfruj(FlagAdminPass)
+                client.send(f"{CypherFlagAdmPass}".encode("utf-8"))
+                print("Próba zalogowania na admina")
 
-        Wlcome = "Podłaczono do chat'u"
-        CypherWlcome = szyfr_vigenera.szyfruj(Wlcome)
-        client.send(CypherWlcome.encode("utf-8"))
+                AdminPasswordEncrypt = client.recv(1024).decode("utf-8")
+                AdminPassword = self.vigeners_cipher.deszyfruj(AdminPasswordEncrypt)
+                # tutaj zamienic haslo na hash hasła
+                if str(AdminPassword) != "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3":
+                    FlagWrng = "FLAG_Wrong_Password"
+                    CypherFlagWrng = self.vigeners_cipher.szyfruj(FlagWrng)
+                    client.send(f"{CypherFlagWrng}".encode("utf-8"))
+                    client.close()
+                    continue
+                    
 
-        thread = threading.Thread(target=ClientHandle, args=(client,))
-        thread.start()
+            self.user_names_list.append(user_name)
+            self.clients_list.append(client)
 
+            print(f"Nowy użytkownik: {user_name}")
+            welcome_msg = f"{user_name} dołączył do chat'u"
+            self.send_to_clients(welcome_msg)
 
-def Kick_User(name):
-    if name in UserNamesList:
-        UserIndex = UserNamesList.index(name)
-        kicked_client = ClientsList[UserIndex]
-        ClientsList.remove(kicked_client)
+            welcome = "Podłaczono do chat'u"
+            cipher_welcome = self.vigeners_cipher.szyfruj(welcome)
+            client.send(cipher_welcome.encode("utf-8"))
 
-        Kickmsg = "ZOSTAŁEŚ WYRZUCONY PRZEZ ADMINA!"
-        CypherKickmsg = szyfr_vigenera.szyfruj(Kickmsg)
-        kicked_client.send(CypherKickmsg.encode("utf-8"))
+            thread = threading.Thread(target=self.client_handle, args=(client,))
+            thread.start()
 
-        kicked_client.close()
-        UserNamesList.remove(name)
+    def kick_user(self, name):
+        if name in self.user_names_list:
+            user_index = self.user_names_list.index(name)
+            kicked_client = self.clients_list[user_index]
+            self.clients_list.remove(kicked_client)
 
-        KickmsgALL = f"{name} został wyrzucony przez Admina!"
-        ServerToClients(KickmsgALL)
+            kick_msg = "ZOSTAŁEŚ WYRZUCONY PRZEZ ADMINA!"
+            cipher_kick_msg = self.vigeners_cipher.szyfruj(kick_msg)
+            kicked_client.send(cipher_kick_msg.encode("utf-8"))
 
+            kicked_client.close()
+            self.user_names_list.remove(name)
 
-print("Serwer został uruchomiony...")
-ReceiveMessages()
+            kick_msg_all = f"{name} został wyrzucony przez Admina!"
+            self.send_to_clients(kick_msg_all)
+
+if __name__ == "__main__":
+    server_instance = Server(socket.gethostbyname(socket.gethostname()), 12345)
+    print("Server has been started...")
+    server_instance.receive_messages()

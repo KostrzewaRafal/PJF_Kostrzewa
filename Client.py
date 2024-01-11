@@ -4,92 +4,97 @@ import hashlib
 
 from VigenerCipher import VigenersCipher
 
-klucz = "ONLYMESSAGE"
-szyfr_vigenera = VigenersCipher(klucz)
+class ClassClient:
+    def __init__(self, host, port,UserNam):
+        self.UserNameInput=UserNam
+        self.host = host
+        self.port = port
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect((self.host, self.port))
+        self.szyfr_vigenera = VigenersCipher("WHATSAPE")
 
+        self.stop_thread = False
 
-host_IP = socket.gethostbyname(socket.gethostname())  # Pobranie ip hosta
-port = 12345
+    def receive_from_server(self):
+        while True:
+            
+            if self.stop_thread:
+                break
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((host_IP, port))
+            try:
+                messageEncrypted = self.client.recv(1024).decode("utf-8")
+                message = self.szyfr_vigenera.deszyfruj(messageEncrypted)
+                if message == "FLAG_INIT":
+                    UserName=self.UserNameInput
+                    UserName = self.szyfr_vigenera.szyfruj(UserName)
 
-UserNameInput = input("Podaj nazwę użytkownika:")
-if UserNameInput == "admin":
-    Admin_Password = input("Podaj hasło dla admina:")#123
-    HASH1= hashlib.sha256()
-    HASH1.update(Admin_Password.encode())
-    Admin_Password = HASH1.hexdigest()
-    print(Admin_Password)
+                    self.client.send(f"{UserName}".encode("utf-8"))
+                    Admin_Password_FLAG_Recv_Encrypted = self.client.recv(1024).decode("utf-8")
+                    Admin_Password_FLAG_Recv = self.szyfr_vigenera.deszyfruj(
+                        Admin_Password_FLAG_Recv_Encrypted
+                    )
+                    if Admin_Password_FLAG_Recv == "FLAG_ADMIN_PASSWORD":
+                        Encrypted_Admin_Password = self.szyfr_vigenera.szyfruj(Admin_Password)
+                        self.client.send(f"{Encrypted_Admin_Password}".encode("utf-8"))
+                        WrongPasswordEncrypted = self.client.recv(1024).decode("utf-8")
+                        FlagWrongPassword = self.szyfr_vigenera.deszyfruj(WrongPasswordEncrypted)
+                        if FlagWrongPassword == "FLAG_Wrong_Password":
+                            print("Wprowadzono złe hasło dla admina!")
+                            self.stop_thread = True
+                    elif Admin_Password_FLAG_Recv == "FLAG_BAN":
+                        print("TEN UŻYTKOWNIK JEST ZBANOWANY!")
+                        self.client.close()
+                        self.stop_thread = True
 
-stop_thread = False
-
-
-def RecevieFromServer():
-    while True:
-        global stop_thread
-        if stop_thread:
-            break
-
-        try:
-            messageEncrypted = client.recv(1024).decode("utf-8")
-            message = szyfr_vigenera.deszyfruj(messageEncrypted)
-            if message == "FLAG_INIT":
-                EncryptedUserNameInput = szyfr_vigenera.szyfruj(UserNameInput)
-                client.send(f"{EncryptedUserNameInput}".encode("utf-8"))
-                Admin_Password_FLAG_Recv_Encrypted = client.recv(1024).decode("utf-8")
-                Admin_Password_FLAG_Recv = szyfr_vigenera.deszyfruj(
-                    Admin_Password_FLAG_Recv_Encrypted
-                )
-                if Admin_Password_FLAG_Recv == "FLAG_ADMIN_PASSWORD":
-                    Encrypted_Admin_Password = szyfr_vigenera.szyfruj(Admin_Password)
-                    client.send(f"{Encrypted_Admin_Password}".encode("utf-8"))
-                    WrongPasswordEncrypted = client.recv(1024).decode("utf-8")
-                    FlagWrongPassword = szyfr_vigenera.deszyfruj(WrongPasswordEncrypted)
-                    if FlagWrongPassword == "FLAG_Wrong_Password":
-                        print("Wprowadzono złe hasło dla admina!")
-                        stop_thread = True
-                elif Admin_Password_FLAG_Recv == "FLAG_BAN":
-                    print("TEN UŻYTKOWNIK JEST ZBANOWANY!")
-                    client.close()
-                    stop_thread = True
-
-            else:
-                print(message)
-        except:
-            print("BŁĄD")
-            client.close()
-            break
-
-
-def ClientToServer():
-    while True:
-        if stop_thread:
-            break
-
-        message = f'{UserNameInput}: {input("")}'
-
-        if len(message) != (len(UserNameInput) + 2):
-            if message[len(UserNameInput) + 2].startswith("/"):
-                if UserNameInput == "admin":
-                    if message[(len(UserNameInput) + 2) :].startswith("/kick"):
-                        messageKICK = f"KICK {message[(len(UserNameInput)+2+6):]}"
-                        EncryptedmessageKICK = szyfr_vigenera.szyfruj(messageKICK)
-                        client.send(EncryptedmessageKICK.encode("utf-8"))
-
-                    elif message[(len(UserNameInput) + 2) :].startswith("/ban"):
-                        messageBAN = f"BAN {message[(len(UserNameInput)+2+5):]}"
-                        EncryptedmessageBAN = szyfr_vigenera.szyfruj(messageBAN)
-                        client.send(EncryptedmessageBAN.encode("utf-8"))
                 else:
-                    print("Nie masz uprawnień admina!")
-            else:
-                Encryptedmessage = szyfr_vigenera.szyfruj(message)
-                client.send(f"{Encryptedmessage}".encode("utf-8"))
+                    print(message)
+            except:
+                print("BŁĄD")
+                self.client.close()
+                break
 
+    def client_to_server(self):
+        while True:
+                if self.stop_thread:
+                    break
+                
+                message = f'{self.UserNameInput}: {input("")}'
 
-Client_Recv_Thread = threading.Thread(target=RecevieFromServer)
-Client_Recv_Thread.start()
+                if len(message) != (len(self.UserNameInput) + 2):
+                    if message[len(self.UserNameInput) + 2].startswith("/"):
+                        if self.UserNameInput == "admin":
+                            if message[(len(self.UserNameInput) + 2) :].startswith("/kick"):
+                                messageKICK = f"KICK {message[(len(self.UserNameInput)+2+6):]}"
+                                EncryptedmessageKICK = self.szyfr_vigenera.szyfruj(messageKICK)
+                                self.client.send(EncryptedmessageKICK.encode("utf-8"))
 
-Client_Send_Thread = threading.Thread(target=ClientToServer)
-Client_Send_Thread.start()
+                            elif message[(len(self.UserNameInput) + 2) :].startswith("/ban"):
+                                messageBAN = f"BAN {message[(len(self.UserNameInput)+2+5):]}"
+                                EncryptedmessageBAN = self.szyfr_vigenera.szyfruj(messageBAN)
+                                self.client.send(EncryptedmessageBAN.encode("utf-8"))
+                        else:
+                            print("Nie masz uprawnień admina!")
+                    else:
+                        Encryptedmessage = self.szyfr_vigenera.szyfruj(message)
+                        self.client.send(f"{Encryptedmessage}".encode("utf-8"))
+
+    def start_threads(self):
+        recv_thread = threading.Thread(target=self.receive_from_server)
+        recv_thread.start()
+        send_thread = threading.Thread(target=self.client_to_server)
+        send_thread.start()
+
+if __name__ == "__main__":
+    
+    user_name_input = input("Podaj nazwe dla użytkownika:")
+    if user_name_input == "admin":
+        Admin_Password = input("Podaj hasło dla admina:")#123
+        HASH1= hashlib.sha256()
+        HASH1.update(Admin_Password.encode())
+        Admin_Password = HASH1.hexdigest()
+        print(Admin_Password)
+    client = ClassClient(socket.gethostbyname(socket.gethostname()), 12345,user_name_input )
+    client.start_threads()
+
+  
+
