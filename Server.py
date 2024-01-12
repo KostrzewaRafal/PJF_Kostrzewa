@@ -79,6 +79,8 @@ class ChatServer:
             ConnectMessage = f"Połączono z {str(IP_Adress)}"
             print(ConnectMessage)
 
+           
+
             FlagINIT = "FLAG_INIT"
             CypherFlagInit = self.szyfr_vigenera.szyfruj(FlagINIT)
             client.send(CypherFlagInit.encode("utf-8"))
@@ -172,13 +174,16 @@ class ChatServer:
                                 CypherFlagWrng = self.szyfr_vigenera.szyfruj(FlagWrng)
                                 client.send(f"{CypherFlagWrng}".encode("utf-8"))
                                 continue
-                    
                     else:
                         NoUser = "No_User" ### JESLI NIE MA KONTA A LOGIN To WYWAL APKE
+                        print("no user")
                         NoUser = self.szyfr_vigenera.szyfruj(NoUser)
                         client.send(NoUser.encode("utf-8"))
                         client.close()
-                        continue
+                        client=None
+                        SuccesfullLoginAttempt = True
+                        CorrectPassword = True
+                        break
 
                        
 
@@ -186,20 +191,20 @@ class ChatServer:
 
 #########################################################################################################################
        
+            if client != None:
+                self.UserNamesList.append(UserName)
+                self.ClientsList.append(client)
 
-            self.UserNamesList.append(UserName)
-            self.ClientsList.append(client)
+                print(f"Nowy użytkownik: {UserName}")
+                WelcomeMsg = f"{UserName} dołączył do chat'u"
+                self.broadcast_message(WelcomeMsg)
 
-            print(f"Nowy użytkownik: {UserName}")
-            WelcomeMsg = f"{UserName} dołączył do chat'u"
-            self.broadcast_message(WelcomeMsg)
+                Wlcome = "\nPodłaczono do chat'u"
+                CypherWlcome = self.szyfr_vigenera.szyfruj(Wlcome)
+                client.send(CypherWlcome.encode("utf-8"))
 
-            Wlcome = "\nPodłaczono do chat'u"
-            CypherWlcome = self.szyfr_vigenera.szyfruj(Wlcome)
-            client.send(CypherWlcome.encode("utf-8"))
-
-            thread = threading.Thread(target=self.handle_client, args=(client,))
-            thread.start()
+                thread = threading.Thread(target=self.handle_client, args=(client,))
+                thread.start()
 
     def kick_user(self, name):
         if name in self.UserNamesList:

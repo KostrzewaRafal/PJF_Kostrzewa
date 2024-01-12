@@ -50,7 +50,6 @@ class ChatClient:
                             continue
                         elif _FLAG_Recv == "REGISTER_SUCCESS":
                             self.SuccesfullLoginAttempt = True
-
                             User_Password_input = input(f"Podaj hasło dla '{self.UserNameInput}':")
                             HASH1 = hashlib.sha256()
                             HASH1.update(User_Password_input.encode())
@@ -63,6 +62,7 @@ class ChatClient:
                             print("NIE MA TAKIEGO KONTA! WYBIERZ REJESTRACJĘ!")
                             self.client.close()
                             self.stop_thread = True
+                            break
                             
                         elif _FLAG_Recv == "LOGIN_SUCCESS":
                             self.SuccesfullLoginAttempt = True
@@ -85,6 +85,8 @@ class ChatClient:
                                 elif FlagWrongPassword == "FLAG_Good_Password":
                                     CorrectPassword = True
                                     continue
+                    send_thread = threading.Thread(target=self.client_to_server)
+                    send_thread.start()
 
             
                 else:
@@ -123,8 +125,6 @@ class ChatClient:
     def start_threads(self):
         recv_thread = threading.Thread(target=self.receive_from_server)
         recv_thread.start()
-        send_thread = threading.Thread(target=self.client_to_server)
-        send_thread.start()
 
 
 
