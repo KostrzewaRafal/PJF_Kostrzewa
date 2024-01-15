@@ -34,10 +34,11 @@ class ChatServer:
     def handle_client(self, client):
         while True:
             try:
-                message0 = client.recv(1024)
+                message0 = client.recv(4096)
                 message0 = message0.decode("utf-8")
                 message1 = message2 = self.szyfr_vigenera.deszyfruj(message0)
-                
+
+                #KICK/BAN - admin
                 if message1.startswith("KICK"):
                     if self.UserNamesList[self.ClientsList.index(client)] == "admin":
                         ToBeKicked = message1[5:]
@@ -58,8 +59,34 @@ class ChatServer:
                         msg = "Nie masz uprawnień!"
                         Cypher = self.szyfr_vigenera.szyfruj(msg)
                         client.send(Cypher.encode("utf-8"))
-                else:
+
+                #PUBLIC / PRIVATE 
+                elif message2.startswith("1"):
                     self.broadcast_message(message2)
+                    
+
+                elif message2.startswith("2"):
+                    MsgParts = message2.split("|")
+                    Destination = MsgParts[1]
+                    Sender = MsgParts[2]
+                    MsgContent = MsgParts[3]
+                    if Destination in self.UserNamesList:
+                        UserIndex = self.UserNamesList.index(Destination)
+                        Destinationclient = self.ClientsList[UserIndex]
+                        
+                        PvMsgDestination=f"{Destination}|{Sender}|{MsgContent}"
+                        CipherPvMsgDestination=self.szyfr_vigenera.szyfruj(PvMsgDestination)
+                        Destinationclient.send(CipherPvMsgDestination.encode("utf-8"))
+
+                        PvMsgSender=f"{Sender}|{Destination}|{MsgContent}"
+                        CipherPvMsgSender = self.szyfr_vigenera.szyfruj(PvMsgSender)
+                        client.send(CipherPvMsgSender.encode("utf-8"))
+                        
+
+
+
+
+
             except:
                 if client in self.ClientsList:
                     index = self.ClientsList.index(client)
@@ -68,6 +95,7 @@ class ChatServer:
 
                     UserName = self.UserNamesList[index]
                     ExitMessage = f"{UserName} opuścił chat"
+                    print(ExitMessage)
                     self.broadcast_message(ExitMessage)
 
                     self.UserNamesList.remove(UserName)
@@ -79,22 +107,19 @@ class ChatServer:
             ConnectMessage = f"Połączono z {str(IP_Adress)}"
             print(ConnectMessage)
 
-           
-
             FlagINIT = "FLAG_INIT"
             CypherFlagInit = self.szyfr_vigenera.szyfruj(FlagINIT)
             client.send(CypherFlagInit.encode("utf-8"))
 
             SuccesfullLoginAttempt = False
 
+            # rejestracja/logowanie
+            logtype = client.recv(4096).decode("utf-8")
 
-            #rejestracja/logowanie
-            logtype = client.recv(1024).decode("utf-8")
-
-#########################################################################################################################
+            #########################################################################################################################
             if logtype == "1":
                 while SuccesfullLoginAttempt == False:
-                    UserNameEncrypted = client.recv(1024).decode("utf-8")
+                    UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
                     print(f"------test deszyfracji rejestracja =[{UserName}]")
 
@@ -113,13 +138,13 @@ class ChatServer:
                         taken = "USERNAME_TAKEN"
                         Flagtaken = self.szyfr_vigenera.szyfruj(taken)
                         client.send(Flagtaken.encode("utf-8"))
-                        continue #### Nie wiem czy to tutaj odpowiednie
+                        continue  #### Nie wiem czy to tutaj odpowiednie
                     else:
                         Succes = "REGISTER_SUCCESS"
                         Succes = self.szyfr_vigenera.szyfruj(Succes)
                         client.send(Succes.encode("utf-8"))
 
-                        Encryptedpassword = client.recv(1024).decode("utf-8")
+                        Encryptedpassword = client.recv(4096).decode("utf-8")
                         password = self.szyfr_vigenera.deszyfruj(Encryptedpassword)
 
                         self.AccountsCredentials[UserName] = password
@@ -128,14 +153,12 @@ class ChatServer:
                             f.write(f"{UserName}:{password}\n")
 
                         print(self.AccountsCredentials)
-                        
+
                         SuccesfullLoginAttempt = True
 
-
-                        
             elif logtype == "2":
-                while SuccesfullLoginAttempt == False:
-                    UserNameEncrypted = client.recv(1024).decode("utf-8")
+                while not SuccesfullLoginAttempt:
+                    UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
                     print(f"------test deszyfracji login =[{UserName}]")
 
@@ -158,14 +181,13 @@ class ChatServer:
                         client.send(Flagtaken.encode("utf-8"))
 
                         while CorrectPassword != True:
-                            Encryptedpassword = client.recv(1024).decode("utf-8")
+                            Encryptedpassword = client.recv(4096).decode("utf-8")
                             password = self.szyfr_vigenera.deszyfruj(Encryptedpassword)
                             if password == self.AccountsCredentials[UserName]:
-
                                 FlagGood = "FLAG_Good_Password"
                                 CypherFlagGood = self.szyfr_vigenera.szyfruj(FlagGood)
                                 client.send(f"{CypherFlagGood}".encode("utf-8"))
-                                
+
                                 print(self.AccountsCredentials)
                                 SuccesfullLoginAttempt = True
                                 CorrectPassword = True
@@ -175,22 +197,18 @@ class ChatServer:
                                 client.send(f"{CypherFlagWrng}".encode("utf-8"))
                                 continue
                     else:
-                        NoUser = "No_User" ### JESLI NIE MA KONTA A LOGIN To WYWAL APKE
+                        NoUser = "No_User"  ### JESLI NIE MA KONTA A LOGIN To WYWAL APKE
                         print("no user")
                         NoUser = self.szyfr_vigenera.szyfruj(NoUser)
                         client.send(NoUser.encode("utf-8"))
                         client.close()
-                        client=None
+                        client = None
                         SuccesfullLoginAttempt = True
                         CorrectPassword = True
                         break
 
-                       
+            #########################################################################################################################
 
-
-
-#########################################################################################################################
-       
             if client != None:
                 self.UserNamesList.append(UserName)
                 self.ClientsList.append(client)
