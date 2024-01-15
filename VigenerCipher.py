@@ -2,7 +2,7 @@ class VigenersCipher:
     def __init__(self, klucz):
         self.klucz = klucz.upper()
         self.polski_alfabet = (
-            "AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ" + "aąbcćdeęfghijklłmnńoóprsśtuwyzźż"
+            "AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ" + "aąbcćdeęfghijklłmnńoóprsśtuwyzźż"+"1234567890"+"!@#$%^&*()?./,:;"
         )
 
     def indeks_polski(self, znak):
