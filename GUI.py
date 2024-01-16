@@ -212,12 +212,12 @@ class appGUI(ctk.CTk):
             compound="center",
             font=("Simple Bold Jut Out", 30),
         )
-        new_window.title.place(relx=0.18, rely=0.1)
+        new_window.title.place(relx=0.11, rely=0.20)
 
         new_window.entry = ctk.CTkEntry(
             new_window, width=344, height=60, placeholder_text="LOGIN"
         )
-        new_window.entry.place(relx=0.11, rely=0.30)
+        new_window.entry.place(relx=0.11, rely=0.45)
 
 
 
@@ -288,13 +288,13 @@ class appGUI(ctk.CTk):
             compound="center",
             font=("Simple Bold Jut Out", 30),
         )
-        new_window.title.place(relx=0.18, rely=0.1)
+        new_window.title.place(relx=0.25, rely=0.20)
 
 
         new_window.entry = ctk.CTkEntry(
             new_window, width=344, height=60, placeholder_text="HASŁO"
         )
-        new_window.entry.place(relx=0.11, rely=0.30)
+        new_window.entry.place(relx=0.11, rely=0.45)
 
         def Next():
             if chat_client._FLAG_Recv == "REGISTER_SUCCESS":
