@@ -94,7 +94,7 @@ class ChatServer:
                     client.close()
 
                     UserName = self.UserNamesList[index]
-                    ExitMessage = f"{UserName} opuścił chat"
+                    ExitMessage = f"1|{UserName} opuścił chat"
                     print(ExitMessage)
                     self.broadcast_message(ExitMessage)
 
@@ -119,7 +119,7 @@ class ChatServer:
             #########################################################################################################################
             if logtype == "1":
                 while SuccesfullLoginAttempt == False:
-                    print("JSDJDJSAJA")
+                    
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
                     print(f"------test deszyfracji rejestracja =[{UserName}]")
@@ -158,7 +158,7 @@ class ChatServer:
                         SuccesfullLoginAttempt = True
 
             elif logtype == "2":
-                print("JSDJDJSAJA")
+                
                 while not SuccesfullLoginAttempt:
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
@@ -216,10 +216,10 @@ class ChatServer:
                 self.ClientsList.append(client)
 
                 print(f"Nowy użytkownik: {UserName}")
-                WelcomeMsg = f"{UserName} dołączył do chat'u"
+                WelcomeMsg = f"1|{UserName} dołączył do chat'u"
                 self.broadcast_message(WelcomeMsg)
 
-                Wlcome = "\nPodłaczono do chat'u"
+                Wlcome = "1|Podłaczono do chat'u"
                 CypherWlcome = self.szyfr_vigenera.szyfruj(Wlcome)
                 client.send(CypherWlcome.encode("utf-8"))
 

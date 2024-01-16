@@ -26,6 +26,7 @@ class ChatClient:
         self.LogPassFlag = False
         self.User_Password_input = ""
         self.FlagWrongPassword =""
+        self.PUBLICCHAT = ""
 
     def receive_from_server(self):
         while True:
@@ -61,7 +62,7 @@ class ChatClient:
                         self._FLAG_Recv = self.szyfr_vigenera.deszyfruj(_FLAG_Recv_Encrypted)
 
                         CorrectPassword = False
-
+                        self.PUBLICCHAT = f"PublicChats\{self.UserNameInput}.txt"
 
 
                         if self._FLAG_Recv == "FLAG_BAN":
@@ -76,9 +77,11 @@ class ChatClient:
                             while not self.RegPassFlag:
                                 time.sleep(0.1)
                                 continue
+                            
 
                             self.SuccesfullLoginAttempt = True
                             
+
                             HASH1 = hashlib.sha256()
                             HASH1.update(self.User_Password_input.encode())
                             self.User_Password = HASH1.hexdigest()
@@ -96,6 +99,7 @@ class ChatClient:
 
                         elif self._FLAG_Recv == "LOGIN_SUCCESS":
                             self.SuccesfullLoginAttempt = True
+                            
 
                             while CorrectPassword != True:
                                 while not self.LogPassFlag:
@@ -131,13 +135,15 @@ class ChatClient:
 
                     send_thread = threading.Thread(target=self.client_to_server)
                     send_thread.start()
+                    with open(f"PublicChats\{self.UserNameInput}.txt", "a") as f:
+                        f.write(f"\n")
 
                 elif message.startswith("1"):
                     with open(f"PublicChats\{self.UserNameInput}.txt", "a") as f:
-                            f.write(f"{message[2:]}\n")
-                    self.PUBLICCHAT = f"PublicChats\{self.UserNameInput}.txt"
-                    print(message[2:])
-                    #wywołaj jakos okienko jesli zamkniete
+                        f.write(f"{message[2:]}\n")
+                    print(message)
+                    
+                    
 
                 elif message.startswith("2"):
                     MsgParts = message.split("|")
@@ -145,7 +151,7 @@ class ChatClient:
                     SecondPerson = MsgParts[2]
                     MsgContent = MsgParts[3]
                     with open(f"PVChats\{self.Me}{SecondPerson}.txt", "a") as f:
-                            f.write(f"{MsgContent}\n")
+                        f.write(f"{MsgContent}\n")
                     self.PVCHAT = f"PVChats\{self.Me}{SecondPerson}.txt"
                     print(message[2:])
                     #wywołaj jakos okienko jesli zamkniete
@@ -169,26 +175,28 @@ class ChatClient:
             if self.stop_thread:
                 break
 
-            #while self.OpenGate
-            self.SENDmessage = f'{self.UserNameInput}: {input("")}'
+            while not self.OpenGate:
+                time.sleep(0.1)
+                continue
+
             self.OpenGate = False
-            if len(self.SENDmessage) != (len(self.UserNameInput) + 2):
-                if self.SENDmessage[len(self.UserNameInput) + 2].startswith("/"):
+            if len(self.SENDmessage) != (len(self.UserNameInput) + 4):
+                if self.SENDmessage[len(self.UserNameInput) + 4].startswith("/"):
                     if self.UserNameInput == "admin":
-                        if self.SENDmessage[(len(self.UserNameInput) + 2) :].startswith("/kick"):
+                        if self.SENDmessage[(len(self.UserNameInput) + 4) :].startswith("/kick"):
                             messageKICK = (
-                                f"KICK {self.SENDmessage[(len(self.UserNameInput)+2+6):]}"
+                                f"KICK {self.SENDmessage[(len(self.UserNameInput)+4+6):]}"
                             )
                             EncryptedmessageKICK = self.szyfr_vigenera.szyfruj(
                                 messageKICK
                             )
                             self.client.send(EncryptedmessageKICK.encode("utf-8"))
 
-                        elif self.SENDmessage[(len(self.UserNameInput) + 2) :].startswith(
+                        elif self.SENDmessage[(len(self.UserNameInput) + 4) :].startswith(
                             "/ban"
                         ):
                             messageBAN = (
-                                f"BAN {self.SENDmessage[(len(self.UserNameInput)+2+5):]}"
+                                f"BAN {self.SENDmessage[(len(self.UserNameInput)+4+5):]}"
                             )
                             EncryptedmessageBAN = self.szyfr_vigenera.szyfruj(
                                 messageBAN

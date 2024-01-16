@@ -1,0 +1,26 @@
+
+Pif: asd
+Pif: asdasd
+Pif: asdasdasda
+admin do��czy� do chat'u
+admin: hej
+Pif: hello
+admin: hej
+admin opu�ci� chat
+
+Pif do��czy� do chat'u
+Pod�aczono do chat'u
+Pif: hejp
+new do��czy� do chat'u
+pomidor do��czy� do chat'u
+pomidor: asdd
+hejka do��czy� do chat'u
+hejka: heej
+pomidor: asdd
+pomidor: asdd
+
+Pif do��czy� do chat'u
+Pod�aczono do chat'u
+admin do��czy� do chat'u
+admin: heej
+Pif: hello
