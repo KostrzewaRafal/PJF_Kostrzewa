@@ -2,7 +2,8 @@ import socket
 import threading
 import hashlib
 from VigenerCipher import VigenersCipher
-import os.path
+import customtkinter as ctk
+import time
 
 class ChatClient:
     def __init__(self):
@@ -18,6 +19,13 @@ class ChatClient:
         self.stop_thread = False
         self.SENDmessage =""
         self.OpenGate = False
+        self.LogRejFlag = False
+        self.LogType = ""
+        self.LoginFlag = False
+        self.RegPassFlag = False
+        self.LogPassFlag = False
+        self.User_Password_input = ""
+        self.FlagWrongPassword =""
 
     def receive_from_server(self):
         while True:
@@ -25,37 +33,54 @@ class ChatClient:
                 break
 
             try:
+
                 messageEncrypted = self.client.recv(4096).decode("utf-8")
                 message = self.szyfr_vigenera.deszyfruj(messageEncrypted)
                 if message == "FLAG_INIT":
-                    LogType = input("Chcesz sie Zarejestrować(1) czy Zalogować(2):")
-                    self.client.send(f"{LogType}".encode("utf-8"))
+                    while not self.LogRejFlag:
+                        time.sleep(0.1)
+                        continue
+
+                    
+                    self.client.send(f"{self.LogType}".encode("utf-8"))
 
                     while self.SuccesfullLoginAttempt != True:
-                        self.UserNameInput = input("Podaj nazwę użytkownika:")
+                        
+                        while not self.LoginFlag:
+                            time.sleep(0.1)
+                            continue
+
+                        self.LoginFlag = False
+
+
                         UserName = self.UserNameInput
                         UserName = self.szyfr_vigenera.szyfruj(UserName)
                         self.client.send(f"{UserName}".encode("utf-8"))
 
                         _FLAG_Recv_Encrypted = self.client.recv(4096).decode("utf-8")
-                        _FLAG_Recv = self.szyfr_vigenera.deszyfruj(_FLAG_Recv_Encrypted)
+                        self._FLAG_Recv = self.szyfr_vigenera.deszyfruj(_FLAG_Recv_Encrypted)
 
                         CorrectPassword = False
 
-                        if _FLAG_Recv == "FLAG_BAN":
+
+
+                        if self._FLAG_Recv == "FLAG_BAN":
                             print("TEN UŻYTKOWNIK JEST ZBANOWANY!")
+                            time.sleep(5)
                             self.client.close()
                             self.stop_thread = True
-                        elif _FLAG_Recv == "USERNAME_TAKEN":
+                        elif self._FLAG_Recv == "USERNAME_TAKEN":
                             print("TA NAZWA JEST ZAJETA!")
                             continue
-                        elif _FLAG_Recv == "REGISTER_SUCCESS":
+                        elif self._FLAG_Recv == "REGISTER_SUCCESS":
+                            while not self.RegPassFlag:
+                                time.sleep(0.1)
+                                continue
+
                             self.SuccesfullLoginAttempt = True
-                            User_Password_input = input(
-                                f"Podaj hasło dla '{self.UserNameInput}':"
-                            )
+                            
                             HASH1 = hashlib.sha256()
-                            HASH1.update(User_Password_input.encode())
+                            HASH1.update(self.User_Password_input.encode())
                             self.User_Password = HASH1.hexdigest()
 
                             Encrypted_Password = self.szyfr_vigenera.szyfruj(
@@ -63,21 +88,25 @@ class ChatClient:
                             )
                             self.client.send(f"{Encrypted_Password}".encode("utf-8"))
 
-                        elif _FLAG_Recv == "No_User":
+                        elif self._FLAG_Recv == "No_User":
                             print("NIE MA TAKIEGO KONTA! WYBIERZ REJESTRACJĘ!")
                             self.client.close()
                             self.stop_thread = True
                             break
 
-                        elif _FLAG_Recv == "LOGIN_SUCCESS":
+                        elif self._FLAG_Recv == "LOGIN_SUCCESS":
                             self.SuccesfullLoginAttempt = True
 
                             while CorrectPassword != True:
-                                User_Password_input = input(
-                                    f"Podaj hasło dla '{self.UserNameInput}':"
-                                )
+                                while not self.LogPassFlag:
+                                    time.sleep(0.1)
+                                    continue
+
+                                self.LogPassFlag = False
+
+
                                 HASH2 = hashlib.sha256()
-                                HASH2.update(User_Password_input.encode())
+                                HASH2.update(self.User_Password_input.encode())
                                 self.User_Password = HASH2.hexdigest()
 
                                 Encrypted_Password = self.szyfr_vigenera.szyfruj(
@@ -90,15 +119,16 @@ class ChatClient:
                                 WrongPasswordEncrypted = self.client.recv(4096).decode(
                                     "utf-8"
                                 )
-                                FlagWrongPassword = self.szyfr_vigenera.deszyfruj(
+                                self.FlagWrongPassword = self.szyfr_vigenera.deszyfruj(
                                     WrongPasswordEncrypted
                                 )
-                                if FlagWrongPassword == "FLAG_Wrong_Password":
+                                if self.FlagWrongPassword == "FLAG_Wrong_Password":
                                     print("Wprowadzono złe hasło!")
 
-                                elif FlagWrongPassword == "FLAG_Good_Password":
+                                elif self.FlagWrongPassword == "FLAG_Good_Password":
                                     CorrectPassword = True
                                     continue
+
                     send_thread = threading.Thread(target=self.client_to_server)
                     send_thread.start()
 
@@ -195,7 +225,3 @@ class ChatClient:
 
     
 
-
-if __name__ == "__main__":
-    chat_client = ChatClient()
-    chat_client.start_threads()

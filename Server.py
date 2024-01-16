@@ -119,6 +119,7 @@ class ChatServer:
             #########################################################################################################################
             if logtype == "1":
                 while SuccesfullLoginAttempt == False:
+                    print("JSDJDJSAJA")
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
                     print(f"------test deszyfracji rejestracja =[{UserName}]")
@@ -157,6 +158,7 @@ class ChatServer:
                         SuccesfullLoginAttempt = True
 
             elif logtype == "2":
+                print("JSDJDJSAJA")
                 while not SuccesfullLoginAttempt:
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
