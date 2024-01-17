@@ -38,7 +38,7 @@ class ChatServer:
                 message0 = message0.decode("utf-8")
                 message1 = message2 = self.szyfr_vigenera.deszyfruj(message0)
 
-                #KICK/BAN - admin
+                # KICK/BAN - admin
                 if message1.startswith("KICK"):
                     if self.UserNamesList[self.ClientsList.index(client)] == "admin":
                         ToBeKicked = message1[5:]
@@ -60,32 +60,33 @@ class ChatServer:
                         Cypher = self.szyfr_vigenera.szyfruj(msg)
                         client.send(Cypher.encode("utf-8"))
 
-                #PUBLIC / PRIVATE 
+                # PUBLIC / PRIVATE
                 elif message2.startswith("1"):
                     self.broadcast_message(message2)
-                    
 
                 elif message2.startswith("2"):
+                    print(message2)
                     MsgParts = message2.split("|")
                     Destination = MsgParts[1]
                     Sender = MsgParts[2]
                     MsgContent = MsgParts[3]
+                    
                     if Destination in self.UserNamesList:
+                        print(MsgContent)
+                        
                         UserIndex = self.UserNamesList.index(Destination)
                         Destinationclient = self.ClientsList[UserIndex]
-                        
-                        PvMsgDestination=f"{Destination}|{Sender}|{MsgContent}"
-                        CipherPvMsgDestination=self.szyfr_vigenera.szyfruj(PvMsgDestination)
+
+                        PvMsgDestination = f"2|{Destination}|{Sender}|{MsgContent}"
+                        CipherPvMsgDestination = self.szyfr_vigenera.szyfruj(
+                            PvMsgDestination
+                        )
                         Destinationclient.send(CipherPvMsgDestination.encode("utf-8"))
 
-                        PvMsgSender=f"{Sender}|{Destination}|{MsgContent}"
+                        PvMsgSender = f"2|{Sender}|{Destination}|{MsgContent}"
+                        print(f"---------asdadads---------{PvMsgSender}")
                         CipherPvMsgSender = self.szyfr_vigenera.szyfruj(PvMsgSender)
                         client.send(CipherPvMsgSender.encode("utf-8"))
-                        
-
-
-
-
 
             except:
                 if client in self.ClientsList:
@@ -119,7 +120,6 @@ class ChatServer:
             #########################################################################################################################
             if logtype == "1":
                 while SuccesfullLoginAttempt == False:
-                    
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
                     print(f"------test deszyfracji rejestracja =[{UserName}]")
@@ -158,7 +158,6 @@ class ChatServer:
                         SuccesfullLoginAttempt = True
 
             elif logtype == "2":
-                
                 while not SuccesfullLoginAttempt:
                     UserNameEncrypted = client.recv(4096).decode("utf-8")
                     UserName = self.szyfr_vigenera.deszyfruj(UserNameEncrypted)
@@ -241,6 +240,7 @@ class ChatServer:
 
             KickmsgALL = f"{name} został wyrzucony przez Admina!"
             self.broadcast_message(KickmsgALL)
+
 
 if __name__ == "__main__":
     chat_server = ChatServer()
